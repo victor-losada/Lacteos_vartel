@@ -57,6 +57,25 @@ async function getProductsFromBlobImages(): Promise<Product[]> {
     } satisfies Product
   })
 }
+/** Solo lee products.json desde Blob (para migración a Postgres). No usa fallback de imágenes. */
+export async function getProductsFromBlobJsonOnly(): Promise<Product[]> {
+  try {
+    const url = await getProductsBlobUrl()
+    if (!url) return []
+    const cacheBust = `${url.includes("?") ? "&" : "?"}_=${Date.now()}`
+    const res = await fetch(url + cacheBust, { cache: "no-store" })
+    if (!res.ok) return []
+    const products: Product[] = await res.json()
+    if (products.length === 0) return []
+    const imagesMap = await getProductImagesMap()
+    return products.map((p) => ({
+      ...p,
+      image: resolveImageUrl(p.image, imagesMap),
+    }))
+  } catch {
+    return []
+  }
+}
 
 export async function getProducts(): Promise<Product[]> {
   try {

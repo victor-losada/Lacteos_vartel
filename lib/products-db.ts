@@ -1,5 +1,13 @@
-import { sql } from "@vercel/postgres"
+import { createPool } from "@vercel/postgres"
 import type { Product } from "./types"
+
+const connectionString =
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.DATABASE_URL
+
+const pool = createPool(connectionString ? { connectionString } : {})
+const sql = pool.sql
 
 let tableInitialized = false
 

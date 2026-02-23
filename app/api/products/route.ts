@@ -51,10 +51,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(product, { status: 201 })
   } catch (err) {
-    const message =
-      process.env.NODE_ENV === "development" && err instanceof Error
-        ? err.message
-        : "Error al crear producto"
+    const message = err instanceof Error ? err.message : "Error al crear producto"
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

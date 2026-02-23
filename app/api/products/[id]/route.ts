@@ -1,5 +1,5 @@
 import { isAuthenticated } from "@/lib/auth"
-import { getProductById, updateProduct, deleteProduct } from "@/lib/products-db"
+import { getProductById, updateProduct, deleteProduct } from "@/lib/products-blob"
 import { NextRequest, NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"

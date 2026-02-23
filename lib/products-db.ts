@@ -1,19 +1,28 @@
 import { createPool } from "@vercel/postgres"
 import type { Product } from "./types"
 
-const connectionString =
-  process.env.POSTGRES_URL ||
-  process.env.POSTGRES_PRISMA_URL ||
-  process.env.DATABASE_URL
+function getSql() {
+  const connectionString =
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.DATABASE_URL
+  if (!connectionString) {
+    throw new Error("Falta POSTGRES_URL, POSTGRES_PRISMA_URL o DATABASE_URL en variables de entorno")
+  }
+  return createPool({ connectionString }).sql
+}
 
-const pool = createPool(connectionString ? { connectionString } : {})
-const sql = pool.sql
+let sql: ReturnType<typeof getSql> | null = null
+function sqlOrThrow() {
+  if (!sql) sql = getSql()
+  return sql
+}
 
 let tableInitialized = false
 
 async function ensureTable() {
   if (tableInitialized) return
-  await sql`
+  await sqlOrThrow()`
     CREATE TABLE IF NOT EXISTS products (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name TEXT NOT NULL,
@@ -50,7 +59,7 @@ function rowToProduct(row: Record<string, unknown>): Product {
 
 export async function getProducts(): Promise<Product[]> {
   await ensureTable()
-  const { rows } = await sql`
+  const { rows } = await sqlOrThrow()`
     SELECT id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt"
     FROM products
     ORDER BY "createdAt" DESC
@@ -60,7 +69,7 @@ export async function getProducts(): Promise<Product[]> {
 
 export async function getProductById(id: string): Promise<Product | null> {
   await ensureTable()
-  const { rows } = await sql`
+  const { rows } = await sqlOrThrow()`
     SELECT id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt"
     FROM products
     WHERE id = ${id}
@@ -75,7 +84,7 @@ export async function addProduct(
   await ensureTable()
   const id = crypto.randomUUID()
   const now = new Date()
-  await sql`
+  await sqlOrThrow()`
     INSERT INTO products (id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt")
     VALUES (
       ${id},
@@ -119,7 +128,7 @@ export async function updateProduct(
   }
   const now = new Date()
 
-  await sql`
+  await sqlOrThrow()`
     UPDATE products
     SET
       name = ${merged.name},
@@ -142,7 +151,7 @@ export async function updateProduct(
 
 export async function deleteProduct(id: string): Promise<boolean> {
   await ensureTable()
-  const { rowCount } = await sql`
+  const { rowCount } = await sqlOrThrow()`
     DELETE FROM products WHERE id = ${id}
   `
   return (rowCount ?? 0) > 0
@@ -154,7 +163,7 @@ export async function migrateProducts(products: Product[]): Promise<{ inserted: 
   let inserted = 0
   for (const p of products) {
     try {
-      const { rowCount } = await sql`
+      const { rowCount } = await sqlOrThrow()`
         INSERT INTO products (id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt")
         VALUES (
           ${p.id},

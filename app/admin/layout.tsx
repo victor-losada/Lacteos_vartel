@@ -25,10 +25,10 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0805] flex">
+    <div className="min-h-screen bg-[#0f0805] flex flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#1a0e08] border-r border-[#2a1a10] flex flex-col shrink-0">
-        <div className="p-4 border-b border-[#2a1a10]">
+      <aside className="w-full md:w-64 bg-[#1a0e08] border-b md:border-b-0 md:border-r border-[#2a1a10] flex flex-col shrink-0">
+        <div className="p-4 border-b border-[#2a1a10] flex items-center justify-between gap-3">
           <Link href="/admin" className="flex items-center gap-3">
             <Image
               src="/images/logo-vartel.png"
@@ -38,12 +38,12 @@ export default function AdminLayout({
               className="h-10 w-auto object-contain"
             />
           </Link>
-          <p className="text-[10px] text-[#6a5040] mt-1 font-sans">
+          <p className="text-[10px] text-[#6a5040] mt-1 font-sans hidden sm:block">
             Panel de Administracion
           </p>
         </div>
 
-        <nav className="flex-1 p-3 flex flex-col gap-1">
+        <nav className="flex-1 p-3 flex flex-col gap-1 md:gap-1">
           {navItems.map((item) => {
             const active = pathname === item.href
             return (
@@ -78,8 +78,11 @@ export default function AdminLayout({
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-6 lg:p-8 max-w-6xl">{children}</div>
+        <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto w-full">
+          {children}
+        </div>
       </main>
     </div>
   )
 }
+

@@ -9,7 +9,10 @@ function getPool(): Pool {
   if (!connectionString) {
     throw new Error("Falta POSTGRES_URL, POSTGRES_PRISMA_URL o DATABASE_URL en variables de entorno")
   }
-  return new Pool({ connectionString })
+   return new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+  })
 }
 
 let pool: Pool | null = null

@@ -1,5 +1,5 @@
 import { isAuthenticated } from "@/lib/auth"
-import { getProducts, addProduct } from "@/lib/products-db"
+import { getProducts, addProduct } from "@/lib/products-blob"
 import { NextRequest, NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
@@ -12,9 +12,8 @@ export async function GET() {
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
       },
     })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Error al obtener productos"
-    return NextResponse.json({ error: message }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: "Error al obtener productos" }, { status: 500 })
   }
 }
 
@@ -51,7 +50,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(product, { status: 201 })
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Error al crear producto"
+    const message =
+      process.env.NODE_ENV === "development" && err instanceof Error
+        ? err.message
+        : "Error al crear producto"
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+

@@ -1,0 +1,122 @@
+import { put } from "@vercel/blob"
+
+const products = [
+  {
+    id: "queso-doblecrema",
+    name: "Queso Doble Crema",
+    description: "Especial para pizza, lasagna y sandwich. Queso fresco, duro, graso.",
+    origin: "San Jose del Guaviare",
+    presentations: ["Entero", "Tajado"],
+    weight: "2500g",
+    image: "/images/imagen1.jpeg",
+    category: "quesos",
+    status: "activo",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "queso-mozzarella",
+    name: "Queso Mozzarella",
+    description: "Queso fresco graso semiduro variedad mozzarella. Ideal para gratinados.",
+    origin: "Caqueta",
+    presentations: ["Entero", "Tajado"],
+    weight: "2500g",
+    image: "/images/imagen2.jpeg",
+    category: "quesos",
+    status: "activo",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "queso-costeno",
+    name: "Queso Costeno",
+    description: "Queso fresco semigraso duro. El tradicional sabor costeno colombiano.",
+    origin: "Meta",
+    presentations: ["Bloque"],
+    weight: "3000g aprox",
+    image: "/images/imagen3.jpeg",
+    category: "quesos",
+    status: "activo",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "queso-campesino-descremado",
+    name: "Queso Campesino Descremado",
+    description: "Queso fresco semiblando campesino. Opcion mas ligera y saludable.",
+    origin: "Boyaca",
+    presentations: ["Bloque"],
+    weight: "3000g aprox",
+    image: "/images/imagen4.jpeg",
+    category: "quesos",
+    status: "activo",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "queso-campesino-criollo",
+    name: "Queso Campesino Criollo",
+    description: "Queso fresco semi blando graso. Autentico sabor del campo caqueteno.",
+    origin: "Caqueta",
+    presentations: ["Bloque"],
+    weight: "4000g aprox",
+    image: "/images/imagen8.jpeg",
+    category: "quesos",
+    status: "activo",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "maiz-dulce",
+    name: "Maiz Dulce",
+    description: "Maiz super dulce congelado. Perfecto para acompanamiento y recetas.",
+    origin: "Importado",
+    presentations: ["1000g", "500g"],
+    weight: "1000g - 500g",
+    image: "/images/imagen5.jpeg",
+    category: "otros",
+    status: "activo",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "tocineta-ahumada",
+    name: "Tocineta de Cerdo Ahumada",
+    description: "Tocineta de carne de cerdo ahumada. Calidad premium nacional.",
+    origin: "Nacional",
+    presentations: ["1000g", "500g", "250g"],
+    weight: "1000g - 500g - 250g",
+    image: "/images/imagen6.jpeg",
+    category: "carnicos",
+    status: "activo",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "costilla-ahumada",
+    name: "Costilla de Cerdo Ahumada",
+    description: "Costilla de carne de cerdo ahumada. Sabor intenso y delicioso.",
+    origin: "Nacional",
+    presentations: ["500g", "250g"],
+    weight: "500g - 250g",
+    image: "/images/imagen7.jpeg",
+    category: "carnicos",
+    status: "activo",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+]
+
+async function seed() {
+  console.log("Seeding products to Vercel Blob...")
+  const blob = await put("products.json", JSON.stringify(products, null, 2), {
+    access: "public",
+    addRandomSuffix: false,
+    contentType: "application/json",
+  })
+  console.log("Products seeded successfully!")
+  console.log("URL:", blob.url)
+  console.log("Total products:", products.length)
+}
+
+seed().catch(console.error)

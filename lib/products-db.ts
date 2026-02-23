@@ -1,7 +1,7 @@
-import { createPool } from "@vercel/postgres"
+import { Pool } from "pg"
 import type { Product } from "./types"
 
-function getSql() {
+function getPool(): Pool {
   const connectionString =
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL ||
@@ -9,20 +9,21 @@ function getSql() {
   if (!connectionString) {
     throw new Error("Falta POSTGRES_URL, POSTGRES_PRISMA_URL o DATABASE_URL en variables de entorno")
   }
-  return createPool({ connectionString }).sql
+  return new Pool({ connectionString })
 }
 
-let sql: ReturnType<typeof getSql> | null = null
-function sqlOrThrow() {
-  if (!sql) sql = getSql()
-  return sql
+let pool: Pool | null = null
+function getDb(): Pool {
+  if (!pool) pool = getPool()
+  return pool
 }
 
 let tableInitialized = false
 
 async function ensureTable() {
   if (tableInitialized) return
-  await sqlOrThrow()`
+  const db = getDb()
+  await db.query(`
     CREATE TABLE IF NOT EXISTS products (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name TEXT NOT NULL,
@@ -36,7 +37,7 @@ async function ensureTable() {
       "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
-  `
+  `)
   tableInitialized = true
 }
 
@@ -59,21 +60,24 @@ function rowToProduct(row: Record<string, unknown>): Product {
 
 export async function getProducts(): Promise<Product[]> {
   await ensureTable()
-  const { rows } = await sqlOrThrow()`
-    SELECT id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt"
-    FROM products
-    ORDER BY "createdAt" DESC
-  `
+  const db = getDb()
+  const { rows } = await db.query(
+    `SELECT id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt"
+     FROM products
+     ORDER BY "createdAt" DESC`
+  )
   return rows.map(rowToProduct)
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
   await ensureTable()
-  const { rows } = await sqlOrThrow()`
-    SELECT id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt"
-    FROM products
-    WHERE id = ${id}
-  `
+  const db = getDb()
+  const { rows } = await db.query(
+    `SELECT id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt"
+     FROM products
+     WHERE id = $1`,
+    [id]
+  )
   if (rows.length === 0) return null
   return rowToProduct(rows[0])
 }
@@ -84,22 +88,24 @@ export async function addProduct(
   await ensureTable()
   const id = crypto.randomUUID()
   const now = new Date()
-  await sqlOrThrow()`
-    INSERT INTO products (id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt")
-    VALUES (
-      ${id},
-      ${product.name},
-      ${product.description},
-      ${product.origin},
-      ${JSON.stringify(product.presentations)}::jsonb,
-      ${product.weight},
-      ${product.image},
-      ${product.category},
-      ${product.status},
-      ${now},
-      ${now}
-    )
-  `
+  const db = getDb()
+  await db.query(
+    `INSERT INTO products (id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11)`,
+    [
+      id,
+      product.name,
+      product.description,
+      product.origin,
+      JSON.stringify(product.presentations),
+      product.weight,
+      product.image,
+      product.category,
+      product.status,
+      now,
+      now,
+    ]
+  )
   return {
     ...product,
     id,
@@ -127,21 +133,24 @@ export async function updateProduct(
     status: updates.status ?? existing.status,
   }
   const now = new Date()
-
-  await sqlOrThrow()`
-    UPDATE products
-    SET
-      name = ${merged.name},
-      description = ${merged.description},
-      origin = ${merged.origin},
-      presentations = ${JSON.stringify(merged.presentations)}::jsonb,
-      weight = ${merged.weight},
-      image = ${merged.image},
-      category = ${merged.category},
-      status = ${merged.status},
-      "updatedAt" = ${now}
-    WHERE id = ${id}
-  `
+  const db = getDb()
+  await db.query(
+    `UPDATE products
+     SET name = $1, description = $2, origin = $3, presentations = $4::jsonb, weight = $5, image = $6, category = $7, status = $8, "updatedAt" = $9
+     WHERE id = $10`,
+    [
+      merged.name,
+      merged.description,
+      merged.origin,
+      JSON.stringify(merged.presentations),
+      merged.weight,
+      merged.image,
+      merged.category,
+      merged.status,
+      now,
+      id,
+    ]
+  )
   return {
     ...existing,
     ...merged,
@@ -151,35 +160,36 @@ export async function updateProduct(
 
 export async function deleteProduct(id: string): Promise<boolean> {
   await ensureTable()
-  const { rowCount } = await sqlOrThrow()`
-    DELETE FROM products WHERE id = ${id}
-  `
+  const db = getDb()
+  const { rowCount } = await db.query("DELETE FROM products WHERE id = $1", [id])
   return (rowCount ?? 0) > 0
 }
 
 /** Inserta productos con sus IDs (para migración desde Blob). No sobrescribe si ya existe. */
 export async function migrateProducts(products: Product[]): Promise<{ inserted: number }> {
   await ensureTable()
+  const db = getDb()
   let inserted = 0
   for (const p of products) {
     try {
-      const { rowCount } = await sqlOrThrow()`
-        INSERT INTO products (id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt")
-        VALUES (
-          ${p.id},
-          ${p.name},
-          ${p.description},
-          ${p.origin},
-          ${JSON.stringify(p.presentations)}::jsonb,
-          ${p.weight},
-          ${p.image},
-          ${p.category},
-          ${p.status},
-          ${p.createdAt}::timestamptz,
-          ${p.updatedAt}::timestamptz
-        )
-        ON CONFLICT (id) DO NOTHING
-      `
+      const { rowCount } = await db.query(
+        `INSERT INTO products (id, name, description, origin, presentations, weight, image, category, status, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10::timestamptz, $11::timestamptz)
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          p.id,
+          p.name,
+          p.description,
+          p.origin,
+          JSON.stringify(p.presentations),
+          p.weight,
+          p.image,
+          p.category,
+          p.status,
+          p.createdAt,
+          p.updatedAt,
+        ]
+      )
       if ((rowCount ?? 0) > 0) inserted += 1
     } catch {
       /* skip error */

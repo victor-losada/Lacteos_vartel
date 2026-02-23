@@ -12,8 +12,9 @@ export async function GET() {
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
       },
     })
-  } catch {
-    return NextResponse.json({ error: "Error al obtener productos" }, { status: 500 })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error al obtener productos"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
